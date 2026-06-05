@@ -86,11 +86,11 @@
 
 <script>
     // =================================================================
-    // CONFIGURACIÓN OBLIGATORIA DEL REPOSITORIO DE GITHUB
+    // CONFIGURACIÓN AJUSTADA A TU REPOSITORIO REAL
     // =================================================================
-    const USUARIO = "GustaboOrtizMorales";        // Tu usuario real de GitHub
-    const REPOSITORIO = "SIGIS_FED";              // Escribe aquí el nombre exacto de tu repositorio
-    const CARPETA = "SEGCRED";                    // Nombre exacto de tu carpeta en GitHub
+    const USUARIO = "DesarrolloInfantilTemprano-DIT"; 
+    const REPOSITORIO = "AtencionesSIHCE";           
+    const CARPETA = "SEGCRED";                       
     // =================================================================
 
     let listaRegistros = [];
@@ -108,16 +108,17 @@
 
         try {
             const respuesta = await fetch(urlApi);
-            if (!respuesta.ok) throw new Error("Acceso denegado. Revisa si el nombre del repositorio o de la carpeta coinciden con las mayúsculas de GitHub.");
+            if (!respuesta.ok) throw new Error("Acceso denegado. Revisa si la ruta de la carpeta o el repositorio tienen las mayúsculas idénticas.");
             
             const archivos = await respuesta.json();
-            // Soporta archivos excel y csv por seguridad de guardado accidental
+            // Filtra archivos excluyendo el marcador temporal nota.txt
             const archivosValidos = archivos.filter(file => file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv'));
 
             if (archivosValidos.length === 0) {
-                statusMsg.className = "fw-bold text-danger";
-                statusMsg.innerText = `Atención: No hay archivos válidos dentro de la carpeta '${CARPETA}'.`;
+                statusMsg.className = "fw-bold text-warning";
+                statusMsg.innerText = `Carpeta '${CARPETA}' lista en la nube. Esperando que subas los reportes Excel para unificar...`;
                 spinner.classList.add('d-none');
+                document.getElementById('tbBody').innerHTML = `<tr><td colspan="100%" class="text-center p-4 text-muted">Sube los archivos Excel dentro de la carpeta '${CARPETA}' en GitHub para activar las búsquedas.</td></tr>`;
                 return;
             }
 
@@ -133,7 +134,7 @@
                 const primeraHoja = workbook.SheetNames[0];
                 const hoja = workbook.Sheets[primeraHoja];
 
-                // Saltamos las líneas de encabezados institucionales para llegar a los campos reales
+                // Saltamos las 8 líneas superiores del reporte de atención integral CRED
                 let json = XLSX.utils.sheet_to_json(hoja, { defval: "", range: 8, raw: false });
 
                 if (json.length > 0) {
@@ -158,6 +159,7 @@
         }
     }
 
+    // El resto de la lógica analítica de renderizado se mantiene intacta
     function generarEncabezadosTabla(columnas) {
         const thHeaders = document.getElementById('thHeaders');
         thHeaders.innerHTML = '';
@@ -184,7 +186,6 @@
         }
 
         const resultados = listaRegistros.filter(row => {
-            // Ajustado estrictamente para coincidir con tus columnas reales del reporte CRED
             const campoDni = buscarValor(row, ['dni', 'documento', 'id']);
             const campoNombre = buscarValor(row, ['apellidos', 'nombre', 'paciente']);
             const campoFecha = buscarValor(row, ['nac', 'fecha', 'nacimiento']);
@@ -197,7 +198,6 @@
                 
                 let dateNum = new Date(campoFecha);
                 
-                // Tratamiento para fechas con separadores latinos diagonales
                 if (isNaN(dateNum.getTime()) && String(campoFecha).includes('/')) {
                     const partes = String(campoFecha).split('/');
                     if(partes.length === 3) {
