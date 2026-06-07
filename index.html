@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema CRED - Consulta Nominal</title>
+    <title>Libreta de Control Digital CRED</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .loader {
-            border-top-color: #2563eb;
-            animation: spinner 1.2s linear infinite;
+            border-top-color: #f43f5e;
+            animation: spinner 1s linear infinite;
         }
         @keyframes spinner {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
         
-        /* ESTILOS DE IMPRESIÓN AVANZADOS (Solución definitiva al guardado de PDF) */
+        /* ESTILOS DE IMPRESIÓN LIMPIOS */
         @media print {
             .no-print { 
                 display: none !important; 
@@ -32,145 +32,161 @@
                 box-shadow: none !important; 
                 border: none !important; 
                 margin: 0 !important; 
-                padding: 0 !important;
+                padding: 4mm !important;
                 max-width: 100% !important; 
                 width: 100% !important;
                 display: block !important;
             }
-            /* Previene el corte de tablas a mitad de una fila */
             tr { 
                 page-break-inside: avoid; 
             }
         }
     </style>
 </head>
-<body class="bg-slate-100 font-sans min-h-screen flex flex-col items-center justify-start p-3 sm:p-6 text-slate-800">
+<body class="bg-amber-50/40 font-sans min-h-screen flex flex-col items-center justify-start p-3 sm:p-6 text-slate-700">
 
-    <div class="w-full max-w-5xl bg-white rounded-xl shadow-md p-5 mb-4 no-print border border-slate-200">
-        <h1 class="text-2xl font-bold text-slate-800 text-center mb-1">Sistema de Consulta Nominal Integrado</h1>
-        <p class="text-xs text-slate-500 text-center mb-5">Mapeo estricto e indexado por columnas nativas de Excel</p>
+    <div class="w-full max-w-5xl bg-white rounded-2xl shadow-xl shadow-amber-100/50 p-6 mb-5 no-print border border-amber-100">
+        <div class="text-center mb-5">
+            <h1 class="text-3xl font-black text-blue-600 tracking-tight flex items-center justify-center gap-2">
+                👶🏽 Sistema CRED <span class="text-emerald-500 text-xl font-medium">Consulta Nominal</span>
+            </h1>
+            <p class="text-xs text-slate-400 mt-1">Busca de forma segura el historial de controles y vacunas por DNI</p>
+        </div>
 
-        <div class="flex flex-col sm:flex-row gap-3">
-            <input type="text" id="dniInput" placeholder="Ingrese el número de DNI del niño" 
-                   class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg shadow-sm"
+        <div class="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto">
+            <input type="text" id="dniInput" placeholder="Escribe el número de DNI aquí..." 
+                   class="flex-1 px-5 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 text-lg shadow-inner transition-colors font-medium placeholder-slate-300"
                    maxlength="15">
             <button id="btnBuscar" onclick="buscarPorDNI()" 
-                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2 rounded-lg transition-colors duration-200 shadow flex items-center justify-center gap-2 cursor-pointer">
-                <span>Buscar Registro</span>
+                    class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-8 py-3 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg cursor-pointer transform active:scale-95 flex items-center justify-center gap-2">
+                <span>Buscar Niño</span>
             </button>
         </div>
 
-        <div id="statusMessage" class="hidden text-center mt-4 text-slate-600 flex items-center justify-center gap-2">
-            <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-200 h-5 w-5"></div>
-            <span id="statusText" class="text-sm font-medium">Buscando...</span>
+        <div id="statusMessage" class="hidden text-center mt-5 text-slate-500 flex items-center justify-center gap-2">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-slate-100 h-5 w-5"></div>
+            <span id="statusText" class="text-sm font-semibold text-rose-500">Leyendo bases de datos...</span>
         </div>
     </div>
 
-    <div id="areaImpresion" class="w-full max-w-5xl bg-white rounded-xl shadow-md p-6 sm:p-8 hidden border border-slate-200 print-container">
+    <div id="areaImpresion" class="w-full max-w-5xl bg-white rounded-3xl shadow-xl shadow-slate-100 p-6 sm:p-8 hidden border border-slate-100 print-container">
         
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-4 mb-5 gap-3">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-4 border-dotted border-slate-100 pb-5 mb-6 gap-3">
             <div>
-                <h2 class="text-2xl font-black text-blue-900 tracking-tight">LIBRETA DE CONTROL DIGITAL</h2>
-                <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Etapa de Vida: Niño • Estrategia Sanitaria CRED</p>
+                <h2 class="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                    <span class="text-3xl">🧸</span> LIBRETA DE CONTROL DIGITAL
+                </h2>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Estrategia Sanitaria de Desarrollo Infantil Temprano (CRED)</p>
             </div>
             <div class="flex items-center gap-2 no-print">
-                <button onclick="exportarAPDF()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-lg shadow transition-all duration-150 cursor-pointer flex items-center gap-1">
-                     Descargar / Imprimir PDF
+                <button onclick="exportarAPDF()" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-black px-5 py-2.5 rounded-xl shadow transition-all duration-150 cursor-pointer transform active:scale-95 flex items-center gap-1">
+                     🖨️ Descargar / Imprimir Libreta
                 </button>
-                <span id="origenArchivo" class="text-xs bg-slate-100 text-slate-600 px-3 py-2 rounded-lg font-mono border border-slate-200"></span>
             </div>
         </div>
         
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
-            <div><span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Nombre del Niño (Col. C)</span> <p id="resNombre" class="text-base font-bold text-slate-900 truncate">-</p></div>
-            <div><span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">DNI (Col. D)</span> <p id="resDNI" class="text-base font-mono font-bold text-slate-900">-</p></div>
-            <div><span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Fecha de Nac. (Col. E)</span> <p id="resFechaNac" class="text-base font-medium text-slate-900">-</p></div>
-            <div><span class="text-[10px] font-bold text-slate-400 block uppercase tracking-wider">Edad Cronológica</span> <p id="resEdad" class="text-base font-extrabold text-blue-700">-</p></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6 bg-gradient-to-br from-blue-50/60 to-emerald-50/40 p-5 rounded-2xl border border-blue-100/50">
+            <div>
+                <span class="text-[10px] font-black text-blue-400 block uppercase tracking-wider">Nombre del Niño</span> 
+                <p id="resNombre" class="text-base font-black text-slate-800 truncate">-</p>
+            </div>
+            <div>
+                <span class="text-[10px] font-black text-emerald-400 block uppercase tracking-wider">Documento Identidad (DNI)</span> 
+                <p id="resDNI" class="text-base font-mono font-black text-slate-800">-</p>
+            </div>
+            <div>
+                <span class="text-[10px] font-black text-amber-500 block uppercase tracking-wider">Fecha de Nacimiento</span> 
+                <p id="resFechaNac" class="text-base font-medium text-slate-800">-</p>
+            </div>
+            <div>
+                <span class="text-[10px] font-black text-rose-400 block uppercase tracking-wider">Edad Cronológica</span> 
+                <p id="resEdad" class="text-base font-black text-blue-600">-</p>
+            </div>
         </div>
 
         <div class="mb-6">
-            <h3 class="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-md mb-3 flex items-center gap-2">
-                <span class="w-1.5 h-3.5 bg-blue-600 rounded-full"></span> HISTORIAL DE CONTROLES CRED
+            <h3 class="text-xs font-black text-blue-600 bg-blue-50/50 border border-blue-100/60 px-3 py-2 rounded-xl mb-3 flex items-center gap-2">
+                <span>📈</span> HISTORIAL DE CONTROLES DE CRECIMIENTO Y DESARROLLO (CRED)
             </h3>
-            <div class="overflow-x-auto border border-slate-200 rounded-lg">
+            <div class="overflow-x-auto border border-slate-100 rounded-2xl">
                 <table class="min-w-full bg-white text-[11px]">
-                    <thead class="bg-slate-50 text-slate-600 uppercase font-bold text-center border-b border-slate-200">
+                    <thead class="bg-slate-50 text-slate-500 uppercase font-black text-center border-b border-slate-100">
                         <tr>
-                            <th class="px-3 py-2 border-r border-slate-200 text-left w-1/4">Control CRED</th>
-                            <th class="px-1 py-2 border-r border-slate-200">N-1</th>
-                            <th class="px-1 py-2 border-r border-slate-200">N-2</th>
-                            <th class="px-1 py-2 border-r border-slate-200">N-3</th>
-                            <th class="px-1 py-2 border-r border-slate-200">N-4</th>
-                            <th class="px-1 py-2 border-r border-slate-200">N-5</th>
-                            <th class="px-1 py-2 border-r border-slate-200">N-6</th>
-                            <th class="px-1 py-2 border-slate-200">N-7</th>
+                            <th class="px-4 py-2.5 border-r border-slate-100 text-left w-1/4">Control CRED</th>
+                            <th class="px-1 py-2.5 border-r border-slate-100">N-1</th>
+                            <th class="px-1 py-2.5 border-r border-slate-100">N-2</th>
+                            <th class="px-1 py-2.5 border-r border-slate-100">N-3</th>
+                            <th class="px-1 py-2.5 border-r border-slate-100">N-4</th>
+                            <th class="px-1 py-2.5 border-r border-slate-100">N-5</th>
+                            <th class="px-1 py-2.5 border-r border-slate-100">N-6</th>
+                            <th class="px-1 py-2.5 text-slate-500">N-7</th>
                         </tr>
                     </thead>
-                    <tbody id="credTableBody" class="divide-y divide-slate-200 text-center text-slate-700 font-medium"></tbody>
+                    <tbody id="credTableBody" class="divide-y divide-slate-100 text-center text-slate-600 font-medium"></tbody>
                 </table>
             </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
             <div>
-                <h3 class="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-md mb-3 flex items-center gap-2">
-                    <span class="w-1.5 h-3.5 bg-amber-500 rounded-full"></span> SUPLEMENTACIÓN HIERRO
+                <h3 class="text-xs font-black text-amber-600 bg-amber-50/50 border border-amber-100/60 px-3 py-2 rounded-xl mb-3 flex items-center gap-2">
+                    <span>🍼</span> SUPLEMENTACIÓN CON HIERRO
                 </h3>
-                <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                <div class="overflow-x-auto border border-slate-100 rounded-2xl">
                     <table class="min-w-full bg-white text-[11px]">
-                        <thead class="bg-slate-50 text-slate-600 uppercase font-bold text-center border-b border-slate-200">
+                        <thead class="bg-slate-50 text-slate-500 uppercase font-black text-center border-b border-slate-100">
                             <tr>
-                                <th class="px-3 py-2 border-r border-slate-200 text-left">Edad de Control</th>
-                                <th class="px-3 py-2">Fecha Registrada</th>
+                                <th class="px-3 py-2.5 border-r border-slate-100 text-left">Edad de Control</th>
+                                <th class="px-3 py-2.5">Fecha Registrada</th>
                             </tr>
                         </thead>
-                        <tbody id="hierroTableBody" class="divide-y divide-slate-200 text-slate-700 font-medium"></tbody>
+                        <tbody id="hierroTableBody" class="divide-y divide-slate-100 text-slate-600 font-medium"></tbody>
                     </table>
                 </div>
             </div>
 
             <div>
-                <h3 class="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-md mb-3 flex items-center gap-2">
-                    <span class="w-1.5 h-3.5 bg-red-500 rounded-full"></span> DOSAJE HEMOGLOBINA
+                <h3 class="text-xs font-black text-rose-600 bg-rose-50/50 border border-rose-100/60 px-3 py-2 rounded-xl mb-3 flex items-center gap-2">
+                    <span>🩸</span> DOSAJE DE HEMOGLOBINA
                 </h3>
-                <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                <div class="overflow-x-auto border border-slate-100 rounded-2xl">
                     <table class="min-w-full bg-white text-[11px]">
-                        <thead class="bg-slate-50 text-slate-600 uppercase font-bold text-center border-b border-slate-200">
+                        <thead class="bg-slate-50 text-slate-500 uppercase font-black text-center border-b border-slate-100">
                             <tr>
-                                <th class="px-3 py-2 border-r border-slate-200 text-left">Edad Evaluada</th>
-                                <th class="px-3 py-2">Resultado / Valor</th>
+                                <th class="px-3 py-2.5 border-r border-slate-100 text-left">Edad Evaluada</th>
+                                <th class="px-3 py-2.5">Resultado / Valor</th>
                             </tr>
                         </thead>
-                        <tbody id="hbTableBody" class="divide-y divide-slate-200 text-slate-700 font-medium"></tbody>
+                        <tbody id="hbTableBody" class="divide-y divide-slate-100 text-slate-600 font-medium"></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
         <div>
-            <h3 class="text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-md mb-3 flex items-center gap-2">
-                <span class="w-1.5 h-3.5 bg-indigo-600 rounded-full"></span> ESQUEMA DE VACUNACIÓN POR GRUPOS DE EDAD
+            <h3 class="text-xs font-black text-emerald-600 bg-emerald-50/50 border border-emerald-100/60 px-3 py-2 rounded-xl mb-3 flex items-center gap-2">
+                <span>💉</span> ESQUEMA NATIVO DE VACUNACIÓN POR GRUPOS DE EDAD
             </h3>
-            <div class="overflow-x-auto border border-slate-200 rounded-lg shadow-sm">
+            <div class="overflow-x-auto border border-slate-100 rounded-2xl">
                 <table class="min-w-full bg-white text-[11px]">
-                    <thead class="bg-slate-50 text-slate-600 uppercase font-bold text-center border-b border-slate-200">
+                    <thead class="bg-slate-50 text-slate-500 uppercase font-black text-center border-b border-slate-100">
                         <tr>
-                            <th class="px-3 py-2 border-r border-slate-200 text-left w-24">Grupo Edad</th>
-                            <th class="px-3 py-2 border-r border-slate-200 text-left">Vacuna / Biológico</th>
-                            <th class="px-2 py-2 border-r border-slate-200 w-28">Dosis Única</th>
-                            <th class="px-2 py-2 border-r border-slate-200 w-28">Dosis-1</th>
-                            <th class="px-2 py-2 border-r border-slate-200 w-28">Dosis-2</th>
-                            <th class="px-2 py-2 w-28">Dosis-3</th>
+                            <th class="px-3 py-2.5 border-r border-slate-100 text-left w-24">Grupo Edad</th>
+                            <th class="px-3 py-2.5 border-r border-slate-100 text-left">Vacuna / Biológico</th>
+                            <th class="px-2 py-2.5 border-r border-slate-100 w-28">Dosis Única</th>
+                            <th class="px-2 py-2.5 border-r border-slate-100 w-28">Dosis-1</th>
+                            <th class="px-2 py-2.5 border-r border-slate-100 w-28">Dosis-2</th>
+                            <th class="px-2 py-2.5 w-28">Dosis-3</th>
                         </tr>
                     </thead>
-                    <tbody id="vacunasTableBody" class="divide-y divide-slate-200 text-slate-700 font-medium"></tbody>
+                    <tbody id="vacunasTableBody" class="divide-y divide-slate-100 text-slate-600 font-medium"></tbody>
                 </table>
             </div>
         </div>
 
     </div>
 
-    <div id="noResult" class="hidden text-center py-8 text-red-500 font-semibold bg-white max-w-5xl w-full rounded-xl shadow border border-red-100 mt-4">
+    <div id="noResult" class="hidden text-center py-8 text-rose-500 font-bold bg-white max-w-5xl w-full rounded-2xl shadow border border-rose-100 mt-4">
         No se localizó ningún registro clínico activo con el DNI ingresado.
     </div>
 
@@ -179,7 +195,7 @@
         const GITHUB_REPO = "LibretaBoys";
         const CARPETA_EXCELS = "ExcelBoys"; 
 
-        // MAPEO DIRECTO CON INDICADORES DE "CAMPOS OSCUROS" (Celdas deshabilitadas en gris)
+        // CONFIGURACIÓN DE CRITERIOS CRED (Marcar campos deshabilitados con "GRIS")
         const MAPEO_CRED = [
             { etapa: "RECIEN NACIDO", n1: "G", n2: "H", n3: "I", n4: "GRIS", n5: "GRIS", n6: "GRIS", n7: "GRIS" },
             { etapa: "MENOR DE UN AÑO", n1: "K", n2: "L", n3: "Q", n4: "R", n5: "AA", n6: "AE", n7: "AI" },
@@ -189,42 +205,50 @@
             { etapa: "CUATRO AÑOS", n1: "BP", n2: "BT", n3: "GRIS", n4: "GRIS", n5: "GRIS", n6: "GRIS", n7: "GRIS" }
         ];
 
+        // CONFIGURACIÓN DE HIERRO
         const MAPEO_HIERRO = [
-            { edad: "4 MESES (Col. S)", col: "S" },
-            { edad: "6 MESES (Col. AA)", col: "AA" },
-            { edad: "7 MESES (Col. AF)", col: "AF" },
-            { edad: "8 MESES (Col. AH)", col: "AH" },
-            { edad: "9 MESES (Col. AJ)", col: "AJ" },
-            { edad: "10 MESES (Col. AM)", col: "AM" },
-            { edad: "11 MESES (Col. AO)", col: "AO" }
+            { edad: "4 MESES", col: "S" },
+            { edad: "6 MESES", col: "AA" },
+            { edad: "7 MESES", col: "AF" },
+            { edad: "8 MESES", col: "AH" },
+            { edad: "9 MESES", col: "AJ" },
+            { edad: "10 MESES", col: "AM" },
+            { edad: "11 MESES", col: "AO" }
         ];
 
+        // CONFIGURACIÓN DE HEMOGLOBINA (Celdas sin correspondencia van como "GRIS")
         const MAPEO_HB = [
-            { edad: "6 MESES (Col. AB)", col: "AB" },
-            { edad: "9 MESES (Col. AK)", col: "AK" },
-            { edad: "1 AÑO (Col. AQ)", col: "AQ" },
-            { edad: "1 AÑO Y 6 MESES (Col. AZ)", col: "AZ" },
-            { edad: "2 AÑOS (Col. BG)", col: "BG" },
-            { edad: "3 AÑOS (Col. BL)", col: "BL" },
-            { edad: "4 AÑOS (Col. BQ)", col: "BQ" }
+            { edad: "6 MESES", col: "AB" },
+            { edad: "7 MESES", col: "GRIS" },
+            { edad: "8 MESES", col: "GRIS" },
+            { edad: "9 MESES", col: "AK" },
+            { edad: "10 MESES", col: "GRIS" },
+            { edad: "11 MESES", col: "GRIS" },
+            { edad: "1 AÑO", col: "AQ" },
+            { edad: "1 AÑO Y 3 MESES", col: "GRIS" },
+            { edad: "1 AÑO Y 6 MESES", col: "AZ" },
+            { edad: "2 AÑOS", col: "BG" },
+            { edad: "3 AÑOS", col: "BL" },
+            { edad: "4 AÑOS", col: "BQ" }
         ];
 
+        // CONFIGURACIÓN DE VACUNACIÓN CON SUS EXTENSIONES DE CAMPOS OSCUROS
         const ESQUEMA_VACUNAS_GRUPOS = [
-            { grupo: "MENOR DE 1 AÑO", nombre: "PENTAVALENTE", unica: "", d1: "M", d2: "T", d3: "AC" },
-            { grupo: "MENOR DE 1 AÑO", nombre: "IPV", unica: "", d1: "N", d2: "U", d3: "AD" },
-            { grupo: "MENOR DE 1 AÑO", nombre: "ROVATIRUS", unica: "", d1: "O", d2: "V", d3: "" },
-            { grupo: "MENOR DE 1 AÑO", nombre: "NEUMOCOCO", unica: "", d1: "P", d2: "W", d3: "" },
+            { grupo: "MENOR DE 1 AÑO", nombre: "PENTAVALENTE", unica: "GRIS", d1: "M", d2: "T", d3: "AC" },
+            { grupo: "MENOR DE 1 AÑO", nombre: "IPV", unica: "GRIS", d1: "N", d2: "U", d3: "AD" },
+            { grupo: "MENOR DE 1 AÑO", nombre: "ROVATIRUS", unica: "GRIS", d1: "O", d2: "V", d3: "GRIS" },
+            { grupo: "MENOR DE 1 AÑO", nombre: "NEUMOCOCO", unica: "GRIS", d1: "P", d2: "W", d3: "GRIS" },
             
-            { grupo: "1 AÑO", nombre: "NEUMOCOCO: 1 año", unica: "AR", d1: "", d2: "", d3: "" },
-            { grupo: "1 AÑO", nombre: "SARAMPIÓN (SPR)", unica: "", d1: "AS", d2: "BC", d3: "" },
-            { grupo: "1 AÑO", nombre: "VARICELA", unica: "AT", d1: "", d2: "", d3: "" },
-            { grupo: "1 AÑO", nombre: "ANTI-FIEBRE AMARILLA (AMA)", unica: "AV", d1: "", d2: "", d3: "" },
-            { grupo: "1 AÑO", nombre: "HEPATITIS A", unica: "AW", d1: "", d2: "", d3: "" },
-            { grupo: "1 AÑO", nombre: "DPT", unica: "AB", d1: "", d2: "", d3: "" },
-            { grupo: "1 AÑO", nombre: "REFUERZO POLIO", unica: "BB", d1: "", d2: "", d3: "" },
+            { grupo: "1 AÑO", nombre: "NEUMOCOCO: 1 año", unica: "AR", d1: "GRIS", d2: "GRIS", d3: "GRIS" },
+            { grupo: "1 AÑO", nombre: "SARAMPIÓN (SPR)", unica: "GRIS", d1: "AS", d2: "BC", d3: "GRIS" },
+            { grupo: "1 AÑO", nombre: "VARICELA", unica: "AT", d1: "GRIS", d2: "GRIS", d3: "GRIS" },
+            { grupo: "1 AÑO", nombre: "ANTI-FIEBRE AMARILLA (AMA)", unica: "AV", d1: "GRIS", d2: "GRIS", d3: "GRIS" },
+            { grupo: "1 AÑO", nombre: "HEPATITIS A", unica: "AW", d1: "GRIS", d2: "GRIS", d3: "GRIS" },
+            { grupo: "1 AÑO", nombre: "DPT", unica: "AB", d1: "GRIS", d2: "GRIS", d3: "GRIS" },
+            { grupo: "1 AÑO", nombre: "REFUERZO POLIO", unica: "BB", d1: "GRIS", d2: "GRIS", d3: "GRIS" },
             
-            { grupo: "4 AÑOS", nombre: "DPT", unica: "BR", d1: "", d2: "", d3: "" },
-            { grupo: "4 AÑOS", nombre: "REFUERZO POLIO", unica: "BS", d1: "", d2: "", d3: "" }
+            { grupo: "4 AÑOS", nombre: "DPT", unica: "BR", d1: "GRIS", d2: "GRIS", d3: "GRIS" },
+            { grupo: "4 AÑOS", nombre: "REFUERZO POLIO", unica: "BS", d1: "GRIS", d2: "GRIS", d3: "GRIS" }
         ];
 
         function calcularEdadExacta(fechaString) {
@@ -251,32 +275,31 @@
             return valor;
         }
 
-        // Función auxiliar para renderizar celdas normales o campos oscuros deshabilitados
-        function obtenerHTMLCeldaCred(llaveMapeo, filaObjeto) {
-            if (llaveMapeo === "GRIS") {
-                return `<td class="bg-slate-300 border-r border-slate-200"></td>`;
+        // Retorna celda regular o celda negra deshabilitada
+        function obtenerHTMLCelda(llaveMapeo, filaObjeto) {
+            if (llaveMapeo === "GRIS" || !llaveMapeo) {
+                return `<td class="bg-slate-800 border-r border-slate-100"></td>`;
             }
-            return `<td class="px-1 py-2 border-r border-slate-200">${formatearValorCelda(filaObjeto[llaveMapeo])}</td>`;
+            return `<td class="px-1 py-2 border-r border-slate-100 bg-white">${formatearValorCelda(filaObjeto[llaveMapeo])}</td>`;
         }
 
         async function buscarPorDNI() {
             const dniBuscado = document.getElementById('dniInput').value.trim();
-            if (!dniBuscado) { alert("Por favor, ingrese un número de DNI."); return; }
+            if (!dniBuscado) { alert("Por favor, escribe un DNI válido."); return; }
 
             document.getElementById('areaImpresion').classList.add('hidden');
             document.getElementById('noResult').classList.add('hidden');
-            mostrarStatus(true, "Buscando niño en la base nominal indexada...");
+            mostrarStatus(true, "Analizando expedientes clínicos...");
 
             try {
                 let urlAPI = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${CARPETA_EXCELS}`;
                 const response = await fetch(urlAPI);
-                if (!response.ok) throw new Error("Fallo de conexión con GitHub.");
+                if (!response.ok) throw new Error("Fallo de red.");
 
                 const archivos = await response.json();
                 const archivosExcel = archivos.filter(file => file.name.endsWith('.xlsx'));
 
                 let niñoEncontrado = null;
-                let nombreArchivoOrigen = "";
 
                 for (const archivo of archivosExcel) {
                     const resExcel = await fetch(archivo.download_url);
@@ -289,15 +312,12 @@
                     const listaNiños = XLSX.utils.sheet_to_json(worksheet, { header: "A", defval: "-" });
                     niñoEncontrado = listaNiños.find(fila => String(fila['D']).trim() === dniBuscado);
 
-                    if (niñoEncontrado) {
-                        nombreArchivoOrigen = archivo.name;
-                        break;
-                    }
+                    if (niñoEncontrado) break;
                 }
 
                 mostrarStatus(false);
                 if (niñoEncontrado) {
-                    renderizarResultado(niñoEncontrado, nombreArchivoOrigen);
+                    renderizarResultado(niñoEncontrado);
                 } else {
                     document.getElementById('noResult').classList.remove('hidden');
                 }
@@ -314,36 +334,33 @@
             if (show) statusText.innerText = text;
         }
 
-        function renderizarResultado(fila, archivo) {
+        function renderizarResultado(fila) {
             document.getElementById('areaImpresion').classList.remove('hidden');
-            document.getElementById('origenArchivo').innerText = "Fuente: " + archivo;
 
             document.getElementById('resNombre').innerText = fila['C'] || '-';
             document.getElementById('resDNI').innerText = fila['D'] || '-';
             document.getElementById('resFechaNac').innerText = formatearValorCelda(fila['E']);
             document.getElementById('resEdad').innerText = calcularEdadExacta(fila['E']);
 
-            // 1. Renderizar Controles CRED con Gestión de Campos Oscuros
+            // 1. Renderizar CRED con Bloques Negros
             const credBody = document.getElementById('credTableBody');
             credBody.innerHTML = '';
             MAPEO_CRED.forEach(m => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.className = "border-b border-slate-100";
                 
-                // Construcción celda por celda evaluando los topes de celdas oscuras
-                let htmlCeldas = `<td class="px-3 py-2 text-left bg-slate-50 font-bold border-r border-slate-200">${m.etapa}</td>`;
-                htmlCeldas += obtenerHTMLCeldaCred(m.n1, fila);
-                htmlCeldas += obtenerHTMLCeldaCred(m.n2, fila);
-                htmlCeldas += obtenerHTMLCeldaCred(m.n3, fila);
-                htmlCeldas += obtenerHTMLCeldaCred(m.n4, fila);
-                htmlCeldas += obtenerHTMLCeldaCred(m.n5, fila);
-                htmlCeldas += obtenerHTMLCeldaCred(m.n6, fila);
+                let htmlCeldas = `<td class="px-3 py-2 text-left bg-slate-50 font-bold border-r border-slate-100 text-slate-700">${m.etapa}</td>`;
+                htmlCeldas += obtenerHTMLCelda(m.n1, fila);
+                htmlCeldas += obtenerHTMLCelda(m.n2, fila);
+                htmlCeldas += obtenerHTMLCelda(m.n3, fila);
+                htmlCeldas += obtenerHTMLCelda(m.n4, fila);
+                htmlCeldas += obtenerHTMLCelda(m.n5, fila);
+                htmlCeldas += obtenerHTMLCelda(m.n6, fila);
                 
-                // Última celda sin borde derecho exterior
                 if (m.n7 === "GRIS") {
-                    htmlCeldas += `<td class="bg-slate-300"></td>`;
+                    htmlCeldas += `<td class="bg-slate-800"></td>`;
                 } else {
-                    htmlCeldas += `<td>${formatearValorCelda(fila[m.n7])}</td>`;
+                    htmlCeldas += `<td class="bg-white">${formatearValorCelda(fila[m.n7])}</td>`;
                 }
 
                 tr.innerHTML = htmlCeldas;
@@ -355,56 +372,60 @@
             hierroBody.innerHTML = '';
             MAPEO_HIERRO.forEach(m => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50";
                 tr.innerHTML = `
-                    <td class="px-3 py-2 font-semibold bg-slate-50 border-r border-slate-200">${m.edad}</td>
-                    <td class="px-3 py-2 text-center">${formatearValorCelda(fila[m.col])}</td>
+                    <td class="px-3 py-2 font-bold bg-slate-50 border-r border-slate-100 text-slate-700">${m.edad}</td>
+                    <td class="px-3 py-2 text-center bg-white">${formatearValorCelda(fila[m.col])}</td>
                 `;
                 hierroBody.appendChild(tr);
             });
 
-            // 3. Renderizar Hemoglobina
+            // 3. Renderizar Hemoglobina con Campos Oscuros Corregidos
             const hbBody = document.getElementById('hbTableBody');
             hbBody.innerHTML = '';
             MAPEO_HB.forEach(m => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50";
-                tr.innerHTML = `
-                    <td class="px-3 py-2 font-semibold bg-slate-50 border-r border-slate-200">${m.edad}</td>
-                    <td class="px-3 py-2 text-center font-bold text-slate-900">${formatearValorCelda(fila[m.col])}</td>
-                `;
+                if (m.col === "GRIS") {
+                    tr.innerHTML = `
+                        <td class="px-3 py-2 font-bold bg-slate-50 border-r border-slate-100 text-slate-700">${m.edad}</td>
+                        <td class="bg-slate-800"></td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td class="px-3 py-2 font-bold bg-slate-50 border-r border-slate-100 text-slate-700">${m.edad}</td>
+                        <td class="px-3 py-2 text-center bg-white font-black text-slate-800">${formatearValorCelda(fila[m.col])}</td>
+                    `;
+                }
                 hbBody.appendChild(tr);
             });
 
-            // 4. Renderizar Vacunas
+            // 4. Renderizar Vacunas con Bloques Negros
             const vacunasBody = document.getElementById('vacunasTableBody');
             vacunasBody.innerHTML = '';
             
             let ultimoGrupo = "";
             ESQUEMA_VACUNAS_GRUPOS.forEach(v => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition-colors";
                 
                 let celdaGrupo = "";
                 if (v.grupo !== ultimoGrupo) {
                     const totalFilasGrupo = ESQUEMA_VACUNAS_GRUPOS.filter(item => item.grupo === v.grupo).length;
-                    celdaGrupo = `<td rowspan="${totalFilasGrupo}" class="px-3 py-2 text-left bg-blue-50/70 font-black text-blue-900 border-r border-slate-200 uppercase tracking-wider align-middle w-24">${v.grupo}</td>`;
+                    let colorGrupo = v.grupo === "MENOR DE 1 AÑO" ? "bg-blue-50 text-blue-700" : (v.grupo === "1 AÑO" ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700");
+                    celdaGrupo = `<td rowspan="${totalFilasGrupo}" class="px-3 py-2 text-left ${colorGrupo} font-black border-r border-slate-100 text-[10px] uppercase tracking-wider align-middle w-24">${v.grupo}</td>`;
                     ultimoGrupo = v.grupo;
                 }
 
                 tr.innerHTML = `
                     ${celdaGrupo}
-                    <td class="px-3 py-2 text-left bg-slate-50 font-bold border-r border-slate-200">${v.nombre}</td>
-                    <td class="px-2 py-2 border-r border-slate-200 ${v.unica ? '' : 'bg-slate-100/70 text-slate-400'}">${formatearValorCelda(fila[v.unica])}</td>
-                    <td class="px-2 py-2 border-r border-slate-200 ${v.d1 ? '' : 'bg-slate-100/70 text-slate-400'}">${formatearValorCelda(fila[v.d1])}</td>
-                    <td class="px-2 py-2 border-r border-slate-200 ${v.d2 ? '' : 'bg-slate-100/70 text-slate-400'}">${formatearValorCelda(fila[v.d2])}</td>
-                    <td class="px-2 py-2 ${v.d3 ? '' : 'bg-slate-100/70 text-slate-400'}">${formatearValorCelda(fila[v.d3])}</td>
+                    <td class="px-3 py-2 text-left bg-slate-50 font-bold border-r border-slate-100 text-slate-700">${v.nombre}</td>
+                    ${obtenerHTMLCelda(v.unica, fila)}
+                    ${obtenerHTMLCelda(v.d1, fila)}
+                    ${obtenerHTMLCelda(v.d2, fila)}
+                    ${obtenerHTMLCelda(v.d3, fila)}
                 `;
                 vacunasBody.appendChild(tr);
             });
         }
 
-        // Sistema de descarga nativo a PDF (Previene fallos con Tailwind v4)
         function exportarAPDF() {
             window.print();
         }
