@@ -16,7 +16,7 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Animación de pulso para alerta de cita vencida */
+        /* Animación de pulso para alerta de niño INASISTENTE con cita vencida */
         @keyframes pulsoAlerta {
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
             70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
@@ -99,7 +99,7 @@
             </div>
             <div class="flex flex-wrap items-center gap-3 no-print">
                 <div id="badgeCitaCred" class="hidden px-4 py-2 rounded-xl text-xs font-black tracking-wide border transition-all flex items-center gap-1.5 shadow-sm">
-                    <span>📅 CITA CRED:</span>
+                    <span id="lblTextoCita">📅 CITA CRED:</span>
                     <span id="lblFechaCitaCred">--/--/----</span>
                 </div>
                 
@@ -314,42 +314,64 @@
 
         async function consultarFechaCitaCred(dni) {
             const badge = document.getElementById('badgeCitaCred');
+            const lblTexto = document.getElementById('lblTextoCita');
             const lblFecha = document.getElementById('lblFechaCitaCred');
             
+            // Reestablecer clases limpias base
             badge.className = "hidden px-4 py-2 rounded-xl text-xs font-black tracking-wide border transition-all flex items-center gap-1.5 shadow-sm";
-            lblFecha.innerText = "--/--/----";
+            lblFecha.innerText = "";
 
             try {
                 const response = await fetch(`${SCRIPT_CITAS_URL}?dni=${dni}`);
-                if (!response.ok) return;
+                badge.classList.remove('hidden');
+
+                if (!response.ok) {
+                    // Si falla el servidor, asumimos por seguridad que no se encuentra cita
+                    lblTexto.innerText = "📅 INASISTENTE";
+                    badge.classList.add('bg-amber-100', 'border-amber-300', 'text-amber-800');
+                    return;
+                }
                 
                 const resJson = await response.json();
                 
-                if (resJson && resJson.fechaCitaCred) {
-                    lblFecha.innerText = resJson.fechaCitaCred;
-                    badge.classList.remove('hidden');
+                // CASO 1: No registra cita o viene vacío/indefinido
+                if (!resJson || !resJson.fechaCitaCred || String(resJson.fechaCitaCred).trim() === "" || resJson.fechaCitaCred === "undefined" || resJson.fechaCitaCred === "-") {
+                    lblTexto.innerText = "📅 INASISTENTE";
+                    badge.classList.add('bg-amber-100', 'border-amber-300', 'text-amber-800');
+                    return;
+                }
 
-                    let partes = resJson.fechaCitaCred.includes('/') ? resJson.fechaCitaCred.split('/') : resJson.fechaCitaCred.split('-');
-                    let fechaCita;
-                    
-                    if (resJson.fechaCitaCred.includes('/')) {
-                        fechaCita = new Date(partes[2], paddingCero(partes[1]) - 1, paddingCero(partes[0]));
-                    } else {
-                        fechaCita = new Date(partes[0], paddingCero(partes[1]) - 1, paddingCero(partes[2]));
-                    }
+                // Si trae una fecha válida, la procesamos
+                const fechaString = resJson.fechaCitaCred;
+                let partes = fechaString.includes('/') ? fechaString.split('/') : fechaString.split('-');
+                let fechaCita;
+                
+                if (fechaString.includes('/')) {
+                    fechaCita = new Date(partes[2], paddingCero(partes[1]) - 1, paddingCero(partes[0]));
+                } else {
+                    fechaCita = new Date(partes[0], paddingCero(partes[1]) - 1, paddingCero(partes[2]));
+                }
 
-                    const hoy = new Date();
-                    hoy.setHours(0, 0, 0, 0);
-                    fechaCita.setHours(0, 0, 0, 0);
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0);
+                fechaCita.setHours(0, 0, 0, 0);
 
-                    if (fechaCita < hoy) {
-                        badge.classList.add('bg-rose-100', 'border-rose-400', 'text-rose-700', 'alerta-vencida');
-                    } else {
-                        badge.classList.add('bg-emerald-50', 'border-emerald-300', 'text-emerald-700');
-                    }
+                if (fechaCita < hoy) {
+                    // CASO 2: La cita ya pasó de la fecha (Inasistente desde el...)
+                    lblTexto.innerText = `📅 INASISTENTE desde el ${fechaString}`;
+                    badge.classList.add('bg-rose-100', 'border-rose-400', 'text-rose-700', 'alerta-vencida');
+                } else {
+                    // CASO 3: Tiene cita futura o vigente normal
+                    lblTexto.innerText = "📅 CITA CRED:";
+                    lblFecha.innerText = fechaString;
+                    badge.classList.add('bg-emerald-50', 'border-emerald-300', 'text-emerald-700');
                 }
             } catch (err) {
                 console.error("Error al obtener la cita CRED:", err);
+                // Manejo de error de red local
+                lblTexto.innerText = "📅 INASISTENTE";
+                badge.classList.add('bg-amber-100', 'border-amber-300', 'text-amber-800');
+                badge.classList.remove('hidden');
             }
         }
         function paddingCero(val) { return parseInt(val, 10); }
@@ -363,7 +385,8 @@
             document.getElementById('casitaNotice').classList.add('hidden');
             document.getElementById('badgeCitaCred').classList.add('hidden');
             
-            mostrarStatus(true, "Validando registro en sistema de mapas...");
+            // MEJORA SOLICITADA: Mensaje limpio de validación de datos
+            mostrarStatus(true, "Espere mientras se valida sus datos");
 
             try {
                 // =========================================================================
@@ -381,7 +404,7 @@
                 }
 
                 // =========================================================================
-                // FASE 2: EL NIÑO EXISTE EN EL MAPA -> BUSCAR SIEMPRE FILA COMPLETA EN GITHUB
+                // FASE 2: EL NIÑO EXISTE EN EL MAPA -> BUSCAR EN GITHUB
                 // =========================================================================
                 mostrarStatus(true, "Buscando expediente e historial clínico completo...");
                 
@@ -471,7 +494,7 @@
                 hierroBody.appendChild(tr);
             });
 
-            // 3. Renderizar Hemoglobina (Con el mapeo de celdas grises reparado)
+            // 3. Renderizar Hemoglobina
             const hbBody = document.getElementById('hbTableBody');
             hbBody.innerHTML = '';
             MAPEO_HB.forEach(m => {
@@ -490,7 +513,7 @@
                 hbBody.appendChild(tr);
             });
 
-            // 4. Renderizar Vacunas (Recuperadas columnas y la quinta de observación)
+            // 4. Renderizar Vacunas
             const vacunasBody = document.getElementById('vacunasTableBody');
             vacunasBody.innerHTML = '';
             
