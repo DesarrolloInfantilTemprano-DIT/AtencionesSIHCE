@@ -16,6 +16,16 @@
             100% { transform: rotate(360deg); }
         }
         
+        /* Animación de pulso para alerta de cita vencida */
+        @keyframes pulsoAlerta {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+            70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .alerta-vencida {
+            animation: pulsoAlerta 2s infinite;
+        }
+        
         /* ESTILOS DE IMPRESIÓN LIMPIOS */
         @media print {
             .no-print { 
@@ -87,7 +97,12 @@
                 </h2>
                 <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Desarrollo Infantil Temprano-(DIT)</p>
             </div>
-            <div class="flex items-center gap-2 no-print">
+            <div class="flex flex-wrap items-center gap-3 no-print">
+                <div id="badgeCitaCred" class="hidden px-4 py-2 rounded-xl text-xs font-black tracking-wide border transition-all flex items-center gap-1.5 shadow-sm">
+                    <span>📅 CITA CRED:</span>
+                    <span id="lblFechaCitaCred">--/--/----</span>
+                </div>
+                
                 <button onclick="exportarAPDF()" class="bg-rose-500 hover:bg-rose-600 text-white text-xs font-black px-5 py-2.5 rounded-xl shadow transition-all duration-150 cursor-pointer transform active:scale-95 flex items-center gap-1">
                      🖨️ Descargar en PDF
                 </button>
@@ -204,8 +219,9 @@
         const GITHUB_REPO = "LibretaBoys";
         const CARPETA_EXCELS = "ExcelBoys"; 
         
-        // URL de tu Google Apps Script de validación - url de MAPA GOOGLE
+        // URLs de tus dos Google Apps Scripts organizados
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzFJPWYyiVo1d5lJnG6LtRRkCp6pOyvfvMbApsa1GWTr02m4b2NLLvV7XyKOIyPVVcCmg/exec";
+        const SCRIPT_CITAS_URL = "https://script.google.com/macros/s/AKfycbw-pQY4dzdyJ3wFLR2mW5MSbgphIuSdiD6sY8tcOo5IbwWBlqOx03jcGw0ENLRb1FZFMg/exec";
 
         // CONFIGURACIÓN DE CRITERIOS CRED
         const MAPEO_CRED = [
@@ -293,6 +309,56 @@
             return `<td class="px-1 py-2 border-r border-slate-100 bg-white">${formatearValorCelda(filaObjeto[llaveMapeo])}</td>`;
         }
 
+        // LÓGICA DE CONSULTA ADICIONAL PARA LA FECHA DE CITA CRED
+        async function consultarFechaCitaCred(dni) {
+            const badge = document.getElementById('badgeCitaCred');
+            const lblFecha = document.getElementById('lblFechaCitaCred');
+            
+            // Limpieza visual inicial
+            badge.className = "hidden px-4 py-2 rounded-xl text-xs font-black tracking-wide border transition-all flex items-center gap-1.5 shadow-sm";
+            lblFecha.innerText = "--/--/----";
+
+            try {
+                const response = await fetch(`${SCRIPT_CITAS_URL}?dni=${dni}`);
+                if (!response.ok) return;
+                
+                const resJson = await response.json();
+                
+                if (resJson && resJson.fechaCitaCred) {
+                    lblFecha.innerText = resJson.fechaCitaCred;
+                    badge.classList.remove('hidden');
+
+                    // Procesar la fecha (Formatos esperados: DD/MM/YYYY o YYYY-MM-DD)
+                    let partes = resJson.fechaCitaCred.includes('/') ? resJson.fechaCitaCred.split('/') : resJson.fechaCitaCred.split('-');
+                    let fechaCita;
+                    
+                    if (resJson.fechaCitaCred.includes('/')) {
+                        // DD/MM/YYYY
+                        fechaCita = new Date(partes[2], partes[1] - 1, partes[0]);
+                    } else {
+                        // YYYY-MM-DD
+                        fechaCita = new Date(partes[0], partes[1] - 1, partes[2]);
+                    }
+
+                    const hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+                    fechaCita.setHours(0, 0, 0, 0);
+
+                    // Si la fecha de la cita es menor a hoy (ya pasó) se activa la alerta roja
+                    if (fechaCita < hoy) {
+                        badge.classList.add('bg-rose-100', 'border-rose-400', 'text-rose-700', 'alerta-vencida');
+                        badge.title = "⚠️ ¡ALERTA! Esta cita ya expiró u ocurrió en el pasado.";
+                    } else {
+                        // Cita normal o futura
+                        badge.classList.add('bg-emerald-50', 'border-emerald-300', 'text-emerald-700');
+                        badge.title = "Cita programada activa.";
+                    }
+                }
+            } catch (err) {
+                console.error("Error al obtener la cita CRED del segundo script:", err);
+            }
+        }
+
         async function buscarPorDNI() {
             const dniBuscado = document.getElementById('dniInput').value.trim();
             if (!dniBuscado) { alert("Por favor, escribe un DNI válido."); return; }
@@ -300,9 +366,13 @@
             document.getElementById('areaImpresion').classList.add('hidden');
             document.getElementById('noResult').classList.add('hidden');
             document.getElementById('casitaNotice').classList.add('hidden');
+            document.getElementById('badgeCitaCred').classList.add('hidden');
             mostrarStatus(true, "Analizando expedientes clínicos...");
 
             try {
+                // Consultar la cita CRED en paralelo sin retrasar la carga principal
+                consultarFechaCitaCred(dniBuscado);
+
                 // FASE 1: Buscar en los archivos Excel alojados en GitHub
                 let urlAPI = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${CARPETA_EXCELS}`;
                 const response = await fetch(urlAPI);
@@ -341,16 +411,13 @@
                     
                     mostrarStatus(false);
 
-                    // Si el Apps Script responde con la bandera NOT_FOUND ejecutamos la detención con aviso elegante
                     if (scriptData.error && scriptData.status === "NOT_FOUND") {
                         document.getElementById('casitaMessage').innerText = scriptData.mensaje;
                         document.getElementById('casitaLink').href = scriptData.enlace;
                         document.getElementById('casitaNotice').classList.remove('hidden');
                     } 
-                    // En caso de que el script sí devuelva la fila (estructura array nativa del doGet original)
                     else if (Array.isArray(scriptData) && scriptData.length > 0) {
                         const regScript = scriptData[0];
-                        // Adaptamos el objeto plano JSON del script a la nomenclatura de renderizado de columnas
                         const filaAdaptada = {
                             'C': regScript.nombreHijo,
                             'D': regScript.dniHijo,
@@ -360,6 +427,7 @@
                     } 
                     else {
                         document.getElementById('noResult').classList.remove('hidden');
+                        document.getElementById('badgeCitaCred').classList.add('hidden');
                     }
                 }
             } catch (error) {
