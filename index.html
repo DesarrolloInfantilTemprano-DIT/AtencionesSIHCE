@@ -211,8 +211,14 @@
 
     </div>
 
-    <div id="noResult" class="hidden text-center py-8 text-rose-500 font-bold bg-white max-w-5xl w-full rounded-2xl shadow border border-rose-100 mt-4">
-        No se localizó ningún registro clínico activo con el DNI ingresado.
+    <div id="noResult" class="hidden flex-col items-center justify-center gap-4 text-center py-8 px-6 text-rose-500 font-bold bg-white max-w-5xl w-full rounded-2xl shadow border border-rose-100 mt-4">
+        <div>
+            Alerta: Sus datos aún no estan en el Padrón - Castillo Grande - <br class="hidden sm:inline"> 
+            Escribir al WhatsApp de la Lic. Carmen 940278529
+        </div>
+        <a id="btnWhatsApp" href="#" target="_blank" class="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black px-6 py-3 rounded-xl shadow transition-all transform active:scale-95 text-sm cursor-pointer no-print">
+            💬 Enviar Mensaje a Lic. Carmen
+        </a>
     </div>
 
     <script>
@@ -259,7 +265,7 @@
 
         const ESQUEMA_VACUNAS_GRUPOS = [
             { grupo: "MENOR DE 1 AÑO", nombre: "PENTAVALENTE", unica: "GRIS", d1: "M", d2: "T", d3: "AC" },
-            { grupo: "MENOR DE 1 AÑO", nombre: "IPV", unica: "GRIS", d1: "N", d2: "U", d3: "AD" }, // Corregido: "grupo" en vez de "group"
+            { grupo: "MENOR DE 1 AÑO", nombre: "IPV", unica: "GRIS", d1: "N", d2: "U", d3: "AD" },
             { grupo: "MENOR DE 1 AÑO", nombre: "ROTAVIRUS", unica: "GRIS", d1: "O", d2: "V", d3: "GRIS" },
             { grupo: "MENOR DE 1 AÑO", nombre: "NEUMOCOCO", unica: "GRIS", d1: "P", d2: "W", d3: "GRIS" },
             
@@ -375,7 +381,12 @@
             if (!dniBuscado) { alert("Por favor, escribe un DNI válido."); return; }
 
             document.getElementById('areaImpresion').classList.add('hidden');
-            document.getElementById('noResult').classList.add('hidden');
+            
+            // Se limpian los estilos flex asignados dinámicamente a noResult
+            const contenedorNoResult = document.getElementById('noResult');
+            contenedorNoResult.classList.add('hidden');
+            contenedorNoResult.classList.remove('flex');
+
             document.getElementById('casitaNotice').classList.add('hidden');
             document.getElementById('badgeCitaCred').classList.add('hidden');
             
@@ -425,7 +436,13 @@
                 if (niñoEncontrado) {
                     renderizarResultado(niñoEncontrado);
                 } else {
-                    document.getElementById('noResult').classList.remove('hidden');
+                    // Configuración automática del texto predefinido para WhatsApp
+                    const mensajeWA = encodeURIComponent(`Hola Lic. Carmen, buenas tardes. Consulté el DNI ${dniBuscado} en la Libreta Digital CRED y me sale que aún no está en el Padrón de Castillo Grande. Por favor, me podría apoyar con el registro?`);
+                    document.getElementById('btnWhatsApp').href = `https://wa.me/51940278529?text=${mensajeWA}`;
+                    
+                    // Activación de la visualización fluida de la alerta
+                    contenedorNoResult.classList.remove('hidden');
+                    contenedorNoResult.classList.add('flex');
                 }
 
             } catch (error) {
